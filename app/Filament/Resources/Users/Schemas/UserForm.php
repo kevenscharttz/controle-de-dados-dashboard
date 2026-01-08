@@ -97,33 +97,44 @@ class UserForm
                         name: 'organizations',
                         titleAttribute: 'name',
                         modifyQueryUsing: function ($query) {
-                            $current = Auth::user();
-                            if (! $current) {
-                                return $query->whereRaw('0=1');
-                            }
-                            if (method_exists($current, 'hasRole') && $current->hasRole('super-admin')) {
-                                return $query;
-                            }
-                            if (method_exists($current, 'hasRole') && $current->hasRole('organization-manager')) {
+                            try {
+                                $current = Auth::user();
+                                if (! $current) {
+                                    return $query->whereRaw('0=1');
+                                }
+                                if (method_exists($current, 'hasRole') && $current->hasRole('super-admin')) {
+                                    return $query;
+                                }
+                                if (method_exists($current, 'hasRole') && $current->hasRole('organization-manager')) {
+                                    $orgIds = $current->organizations()->pluck('organizations.id');
+                                    return $query->whereIn('organizations.id', $orgIds);
+                                }
                                 $orgIds = $current->organizations()->pluck('organizations.id');
                                 return $query->whereIn('organizations.id', $orgIds);
+                            } catch (\Throwable $e) {
+                                // Se as tabelas ainda não existem (ex.: migração pendente), não quebre o render do formulário
+                                Log::error('Falha ao preparar query de organizações no UserForm: ' . $e->getMessage());
+                                return $query->whereRaw('0=1');
                             }
-                            $orgIds = $current->organizations()->pluck('organizations.id');
-                            return $query->whereIn('organizations.id', $orgIds);
                         }
                     )
                     ->default(function () {
-                        $current = Auth::user();
-                        if (! $current) {
+                        try {
+                            $current = Auth::user();
+                            if (! $current) {
+                                return [];
+                            }
+                            if (method_exists($current, 'hasRole') && $current->hasRole('organization-manager')) {
+                                $orgIds = $current->organizations()->pluck('organizations.id');
+                                if ($orgIds->count() === 1) {
+                                    return [$orgIds->first()];
+                                }
+                            }
+                            return [];
+                        } catch (\Throwable $e) {
+                            Log::error('Falha ao definir default de organizações no UserForm: ' . $e->getMessage());
                             return [];
                         }
-                        if (method_exists($current, 'hasRole') && $current->hasRole('organization-manager')) {
-                            $orgIds = $current->organizations()->pluck('organizations.id');
-                            if ($orgIds->count() === 1) {
-                                return [$orgIds->first()];
-                            }
-                        }
-                        return [];
                     })
                     ->required(fn() => Auth::user()?->hasRole('organization-manager')),
             ]);

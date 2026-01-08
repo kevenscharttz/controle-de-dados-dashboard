@@ -16,7 +16,8 @@ class EditUser extends EditRecord
         return [
             ViewAction::make(),
             DeleteAction::make()
-                ->visible(fn () => \Illuminate\Support\Facades\Gate::allows('delete', $this->record)),
+                // Evita 500 no render caso policy/BD lancem excecao: trata como nao visivel
+                ->visible(fn () => rescue(fn () => \Illuminate\Support\Facades\Gate::allows('delete', $this->record), false)),
         ];
     }
 }
