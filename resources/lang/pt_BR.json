@@ -1,0 +1,7 @@
+{
+    "Login": "Entrar",
+    "Email Address": "Endereço de E-mail",
+    "Password": "Senha",
+    "Remember me": "Lembrar-me",
+    "filament-panels::pages/auth/login.form.actions.authenticate.label": "Entrar"
+}
