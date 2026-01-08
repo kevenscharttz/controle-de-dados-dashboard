@@ -2,7 +2,7 @@
     @php
         $rawUrl = $record->url ?? '';
         $iframeUrl = $rawUrl;
-        $isSecure = request()->isSecure();
+    $isSecure = request()->isSecure() || strtolower(request()->header('x-forwarded-proto', '')) === 'https';
         $isHttp = is_string($rawUrl) && str_starts_with($rawUrl, 'http://');
         $proxyEnabled = (bool) config('services.metabase.proxy_enabled');
         $proxyBase = rtrim((string) config('services.metabase.proxy_base'), '/');

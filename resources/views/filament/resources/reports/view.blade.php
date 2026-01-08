@@ -1,4 +1,12 @@
 <x-filament-panels::page>
+    @php
+        $rawUrl = $record->url ?? '';
+        $isSecure = request()->isSecure() || strtolower(request()->header('x-forwarded-proto', '')) === 'https';
+        $iframeUrl = $rawUrl;
+        if ($isSecure && is_string($rawUrl) && str_starts_with($rawUrl, 'http://')) {
+            $iframeUrl = route('proxy.fetch') . '?url=' . urlencode($rawUrl);
+        }
+    @endphp
     <div class="space-y-6">
         <!-- TAGS/BADGES -->
         <div class="flex flex-wrap gap-2">
@@ -52,7 +60,7 @@
             <!-- IFRAME RESPONSIVO -->
             <iframe
                 id="reportFrame"
-                src="{{ $record->url }}"
+                src="{{ $iframeUrl }}"
                 class="w-full h-[70vh] sm:h-[75vh] lg:h-[80vh] border-0 block"
                 loading="lazy"
                 x-on:load="loaded = true"

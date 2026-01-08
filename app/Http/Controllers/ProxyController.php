@@ -57,32 +57,86 @@ class ProxyController extends Controller
             if (!empty($parts['port'])) {
                 $originWithPort .= ':' . $parts['port'];
             }
+            $originPath = $parts['path'] ?? '/';
 
             $proxyFetch = function (string $url) {
                 $encoded = urlencode($url);
                 return route('proxy.fetch') . '?url=' . $encoded;
             };
 
-            // 1) Root-relative URLs: href="/x" or src="/x" => route proxy(origin + path)
+            // Build absolute URLs from relative paths using the origin path as base
+            $absolutize = function (string $relative) use ($originWithPort, $originPath) {
+                $relative = trim($relative);
+                if ($relative === '' || $relative[0] === '#') return $relative;
+                if (preg_match('#^(?:data:|mailto:|javascript:)#i', $relative)) return $relative;
+                if (str_starts_with($relative, '//')) {
+                    // Protocol-relative: default to https
+                    return 'https:' . $relative;
+                }
+                if (preg_match('#^https?://#i', $relative)) return $relative;
+                if ($relative[0] === '/') {
+                    return $originWithPort . $relative;
+                }
+                // Base directory of origin path
+                $baseDir = rtrim(str_replace('\\', '/', dirname($originPath)), '/');
+                if ($baseDir === '') $baseDir = '/';
+                $combined = $baseDir . '/' . $relative;
+                // Normalize ./ and ../ segments
+                $segments = [];
+                foreach (explode('/', $combined) as $seg) {
+                    if ($seg === '' || $seg === '.') continue;
+                    if ($seg === '..') { array_pop($segments); continue; }
+                    $segments[] = $seg;
+                }
+                $normalized = '/' . implode('/', $segments);
+                return $originWithPort . $normalized;
+            };
+
+            // 1) Remove meta CSP that blocks iframe inline (header CSP is already dropped)
+            if (str_contains($contentType, 'text/html')) {
+                $body = preg_replace('#<meta\s+http-equiv=[\"\']Content-Security-Policy[\"\'][^>]*>#i', '', $body);
+            }
+
+            // 2) Root-relative URLs: href="/x" or src="/x" => route proxy(origin + path)
             $body = preg_replace_callback('#(href|src)=([\"\'])(/[^\"\']*)\2#i', function ($m) use ($originWithPort, $proxyFetch) {
                 $absolute = $originWithPort . $m[3];
                 return $m[1] . '=' . $m[2] . $proxyFetch($absolute) . $m[2];
             }, $body);
 
-            // 2) Absolute http(s) links: rewrite http://... and https://... to proxy (helps mixed content)
+            // 3) Absolute http(s) links: rewrite http://... and https://... to proxy (helps mixed content)
             $body = preg_replace_callback('#(href|src)=([\"\'])(https?:\/\/[^\"\']*)\2#i', function ($m) use ($proxyFetch) {
                 return $m[1] . '=' . $m[2] . $proxyFetch($m[3]) . $m[2];
             }, $body);
 
-            // 3) CSS url(/x) => url(proxy(origin + path))
+            // 4) CSS url(/x) => url(proxy(origin + path))
             $body = preg_replace_callback('#url\((\s*)(/[^)\s\"\']+)(\s*)\)#i', function ($m) use ($originWithPort, $proxyFetch) {
                 $absolute = $originWithPort . $m[2];
                 return 'url(' . $proxyFetch($absolute) . ')';
             }, $body);
 
-            // 4) CSS url(http...) => url(proxy(http...))
+            // 5) CSS url(http...) => url(proxy(http...))
             $body = preg_replace_callback('#url\((\s*)(https?:[^)\s\"\']+)(\s*)\)#i', function ($m) use ($proxyFetch) {
                 return 'url(' . $proxyFetch($m[2]) . ')';
+            }, $body);
+            // 5.1) CSS url(//host/...) => url(proxy(https://host/...))
+            $body = preg_replace_callback('#url\((\s*)(//[^)\s\"\']+)(\s*)\)#i', function ($m) use ($proxyFetch) {
+                return 'url(' . $proxyFetch('https:' . $m[2]) . ')';
+            }, $body);
+            // 5.2) CSS url(relative) => absolutize then proxy
+            $body = preg_replace_callback('#url\((\s*)(?!data:|https?://|//|/)([^)\s\"\']+)(\s*)\)#i', function ($m) use ($absolutize, $proxyFetch) {
+                $absolute = $absolutize($m[2]);
+                return 'url(' . $proxyFetch($absolute) . ')';
+            }, $body);
+            // 3.1) Protocol-relative //host/... => proxy with https
+            $body = preg_replace_callback('#(href|src)=([\"\'])(\/\/[^\"\']*)\2#i', function ($m) use ($proxyFetch) {
+                $absolute = 'https:' . $m[3];
+                return $m[1] . '=' . $m[2] . $proxyFetch($absolute) . $m[2];
+            }, $body);
+
+            // 3.2) Relative links: href="file.js" or src="assets/app.css" => absolutize to origin then proxy
+            $body = preg_replace_callback('#(href|src)=([\"\'])(?!data:|mailto:|javascript:|https?://|//|/)([^\"\']+)\2#i', function ($m) use ($absolutize, $proxyFetch) {
+                $absolute = $absolutize($m[3]);
+                return $m[1] . '=' . $m[2] . $proxyFetch($absolute) . $m[2];
             }, $body);
         }
 
