@@ -4,7 +4,7 @@
         $iframeUrl = $rawUrl;
     $isSecure = request()->isSecure() || strtolower(request()->header('x-forwarded-proto', '')) === 'https';
         $isHttpLike = is_string($rawUrl) && (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://'));
-        if ($isSecure && $isHttpLike) {
+        if ($isSecure && is_string($rawUrl) && str_starts_with($rawUrl, 'http://')) {
             // Always use the universal proxy for external http(s) links to avoid X-Frame-Options/CSP/mixed content
             $p = parse_url($rawUrl);
             $scheme = strtolower($p['scheme'] ?? 'http');

@@ -4,7 +4,7 @@
         $isSecure = request()->isSecure() || strtolower(request()->header('x-forwarded-proto', '')) === 'https';
         $iframeUrl = $rawUrl;
         $isHttpLike = is_string($rawUrl) && (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://'));
-        if ($isSecure && $isHttpLike) {
+        if ($isSecure && is_string($rawUrl) && str_starts_with($rawUrl, 'http://')) {
             $p = parse_url($rawUrl);
             $scheme = strtolower($p['scheme'] ?? 'http');
             $host = ($p['host'] ?? '');
