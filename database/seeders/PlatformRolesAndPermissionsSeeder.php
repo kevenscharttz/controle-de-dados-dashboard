@@ -11,7 +11,7 @@ class PlatformRolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Define permissions
+        // Define permissions for Filament Resources (Shield config uses Pascal + ':' separator)
         $permissions = [
             // Dashboards
             'ViewAny:Dashboard', 'View:Dashboard', 'Create:Dashboard', 'Update:Dashboard', 'Delete:Dashboard', 'Restore:Dashboard', 'ForceDelete:Dashboard', 'ForceDeleteAny:Dashboard', 'RestoreAny:Dashboard', 'Replicate:Dashboard', 'Reorder:Dashboard',
@@ -27,7 +27,19 @@ class PlatformRolesAndPermissionsSeeder extends Seeder
             'Dashboard:Embed', 'Dashboard:Publish', 'User:Invite', 'User:ResetPassword', 'Organization:AssignUser', 'Settings:Manage',
         ];
 
-        foreach ($permissions as $perm) {
+        // Filament Pages permissions (Shield pages.prefix = 'view', subject = 'class')
+        $pagePermissions = [
+            'View:App\\Filament\\Pages\\HomePage',
+        ];
+
+        // Filament Widgets permissions (Shield widgets.prefix = 'view', subject = 'class')
+        $widgetPermissions = [
+            'View:App\\Filament\\Widgets\\UserCountWidget',
+            'View:App\\Filament\\Widgets\\DashboardsCountWidget',
+            'View:App\\Filament\\Widgets\\RecentDashboardsWidget',
+        ];
+
+        foreach (array_merge($permissions, $pagePermissions, $widgetPermissions) as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
 
@@ -35,12 +47,12 @@ class PlatformRolesAndPermissionsSeeder extends Seeder
         $allPermissions = Permission::all();
 
         // Super admin -> all permissions
-        $super = Role::firstOrCreate(['name' => 'super_admin']);
-        $super->syncPermissions($allPermissions);
+    $super = Role::firstOrCreate(['name' => 'super_admin']);
+    $super->syncPermissions($allPermissions);
 
         // Organization manager -> org + dashboard + report + user management within org
         $orgPermNames = array_filter(
-            $permissions,
+            array_merge($permissions, $pagePermissions, $widgetPermissions),
             fn($p) => str_contains($p, ':Organization') || str_contains($p, ':Dashboard') || str_contains($p, ':Report') || str_contains($p, ':User')
         );
         $org = Role::firstOrCreate(['name' => 'organization-manager']);
