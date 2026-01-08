@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
+import path from 'node:path';
 
 export default defineConfig({
     plugins: [
@@ -14,4 +15,10 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    resolve: {
+        alias: {
+            // Allow importing Filament vendor CSS via an alias in theme.css
+            '@filament': path.resolve(__dirname, 'vendor/filament/filament/resources/css'),
+        },
+    },
 });
