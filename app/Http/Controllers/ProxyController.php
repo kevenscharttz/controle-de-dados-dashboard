@@ -8,6 +8,111 @@ use Illuminate\Support\Str;
 
 class ProxyController extends Controller
 {
+    /**
+     * Generic, zero-config HTTPS proxy. Takes any http/https URL via query string
+     * and returns its content, rewriting asset URLs so the page works inside an iframe
+     * on HTTPS panels without mixed-content issues. Includes SSRF protections.
+     */
+    public function fetch(Request $request)
+    {
+        $raw = (string) $request->query('url', '');
+        if ($raw === '') {
+            abort(400, 'Missing url');
+        }
+
+        $parts = parse_url($raw);
+        $scheme = $parts['scheme'] ?? '';
+        $host = $parts['host'] ?? '';
+        if (!in_array($scheme, ['http', 'https'], true) || empty($host)) {
+            abort(400, 'Invalid url');
+        }
+
+        // Basic SSRF protections: block localhost and private/reserved IPs
+        $blockedHosts = ['localhost', '127.0.0.1', '::1'];
+        if (in_array(strtolower($host), $blockedHosts, true)) {
+            abort(403);
+        }
+        $ips = @gethostbynamel($host) ?: [];
+        foreach ($ips as $ip) {
+            if ($this->isPrivateOrReservedIp($ip)) {
+                abort(403);
+            }
+        }
+
+        // Forward request
+        $upstream = $raw;
+        $resp = Http::withHeaders([
+            'Accept' => '*/*',
+            'User-Agent' => 'DashboardProxy/1.0',
+        ])->get($upstream);
+
+        $status = $resp->status();
+        $contentType = $resp->header('Content-Type', 'text/html; charset=UTF-8');
+        $body = $resp->body();
+
+        // Only rewrite for text responses
+        if (is_string($body) && (str_contains($contentType, 'text/html') || str_contains($contentType, 'text/css') || str_contains($contentType, 'application/javascript'))) {
+            $origin = ($scheme . '://' . $host);
+            $originWithPort = $origin;
+            if (!empty($parts['port'])) {
+                $originWithPort .= ':' . $parts['port'];
+            }
+
+            $proxyFetch = function (string $url) {
+                $encoded = urlencode($url);
+                return route('proxy.fetch') . '?url=' . $encoded;
+            };
+
+            // 1) Root-relative URLs: href="/x" or src="/x" => route proxy(origin + path)
+            $body = preg_replace_callback('#(href|src)=([\"\'])(/[^\"\']*)\2#i', function ($m) use ($originWithPort, $proxyFetch) {
+                $absolute = $originWithPort . $m[3];
+                return $m[1] . '=' . $m[2] . $proxyFetch($absolute) . $m[2];
+            }, $body);
+
+            // 2) Absolute http(s) links: rewrite http://... and https://... to proxy (helps mixed content)
+            $body = preg_replace_callback('#(href|src)=([\"\'])(https?:\/\/[^\"\']*)\2#i', function ($m) use ($proxyFetch) {
+                return $m[1] . '=' . $m[2] . $proxyFetch($m[3]) . $m[2];
+            }, $body);
+
+            // 3) CSS url(/x) => url(proxy(origin + path))
+            $body = preg_replace_callback('#url\((\s*)(/[^)\s\"\']+)(\s*)\)#i', function ($m) use ($originWithPort, $proxyFetch) {
+                $absolute = $originWithPort . $m[2];
+                return 'url(' . $proxyFetch($absolute) . ')';
+            }, $body);
+
+            // 4) CSS url(http...) => url(proxy(http...))
+            $body = preg_replace_callback('#url\((\s*)(https?:[^)\s\"\']+)(\s*)\)#i', function ($m) use ($proxyFetch) {
+                return 'url(' . $proxyFetch($m[2]) . ')';
+            }, $body);
+        }
+
+        return response($body, $status)->withHeaders([
+            'Content-Type' => $contentType,
+        ]);
+    }
+
+    private function isPrivateOrReservedIp(string $ip): bool
+    {
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $long = ip2long($ip);
+            $ranges = [
+                ['10.0.0.0', '10.255.255.255'],
+                ['172.16.0.0', '172.31.255.255'],
+                ['192.168.0.0', '192.168.255.255'],
+                ['127.0.0.0', '127.255.255.255'],
+            ];
+            foreach ($ranges as [$start, $end]) {
+                if ($long >= ip2long($start) && $long <= ip2long($end)) return true;
+            }
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            // Block localhost & unique local addresses
+            if ($ip === '::1' || str_starts_with(strtolower($ip), 'fc') || str_starts_with(strtolower($ip), 'fd')) {
+                return true;
+            }
+        }
+        return false;
+    }
     public function metabase(Request $request, string $path = '')
     {
         if (!config('services.metabase.proxy_enabled')) {

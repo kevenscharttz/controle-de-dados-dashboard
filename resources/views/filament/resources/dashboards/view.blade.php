@@ -6,10 +6,9 @@
         $isHttp = is_string($rawUrl) && str_starts_with($rawUrl, 'http://');
         $proxyEnabled = (bool) config('services.metabase.proxy_enabled');
         $proxyBase = rtrim((string) config('services.metabase.proxy_base'), '/');
-        if ($isSecure && $isHttp && $proxyEnabled && $proxyBase && str_starts_with($rawUrl, $proxyBase)) {
-            $rawPath = ltrim(substr($rawUrl, strlen($proxyBase)), '/');
-            $query = parse_url($rawUrl, PHP_URL_QUERY);
-            $iframeUrl = route('proxy.metabase', ['path' => $rawPath]) . ($query ? ('?' . $query) : '');
+        if ($isSecure && $isHttp) {
+            // Prefer zero-config generic proxy
+            $iframeUrl = route('proxy.fetch') . '?url=' . urlencode($rawUrl);
         }
     @endphp
         <div class="space-y-6">

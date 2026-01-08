@@ -23,3 +23,8 @@ Route::middleware(['auth'])
     ->get('/proxy/metabase/{path?}', [ProxyController::class, 'metabase'])
     ->where('path', '.*')
     ->name('proxy.metabase');
+
+// Zero-config generic proxy for any http/https URL (with SSRF protections)
+Route::middleware(['auth'])
+    ->get('/proxy/fetch', [ProxyController::class, 'fetch'])
+    ->name('proxy.fetch');
