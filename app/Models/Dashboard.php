@@ -91,7 +91,7 @@ class Dashboard extends Model
         }
 
         // Super-admins veem tudo
-        if (method_exists($user, 'hasRole') && $user->hasRole('super-admin')) {
+        if (method_exists($user, 'hasRole') && ($user->hasRole('super_admin') || $user->hasRole('super-admin'))) {
             return $query;
         }
 

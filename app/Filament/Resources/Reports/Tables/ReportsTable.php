@@ -143,7 +143,7 @@ class ReportsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn () => auth()->user()?->hasAnyRole(['super-admin', 'admin', 'organization-manager']))
+                        ->visible(fn () => auth()->user()?->hasAnyRole(['super_admin', 'super-admin', 'admin', 'organization-manager']))
                 ]),
             ])
             ->defaultSort('created_at', 'desc')

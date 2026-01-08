@@ -59,7 +59,7 @@ class DashboardForm
                         }
                         
                         // Super-admin pode ver todas as organizações
-                        if ($user->hasRole('super-admin')) {
+                            if ($user->hasRole('super_admin') || $user->hasRole('super-admin')) {
                             return Organization::pluck('name', 'id');
                         }
                         

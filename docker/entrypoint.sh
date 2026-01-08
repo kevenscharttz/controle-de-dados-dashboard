@@ -37,6 +37,13 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
   php artisan migrate --force || echo "[entrypoint] Migrations falharam (provavel DB indisponivel). Continuando..."
 fi
 
+# Seeders essenciais (idempotentes) - controlado por RUN_SEEDERS (padrao: true)
+if [ "${RUN_SEEDERS:-true}" = "true" ]; then
+  echo "[entrypoint] Executando seeders essenciais..."
+  php artisan db:seed --class=PlatformRolesAndPermissionsSeeder --force || true
+  php artisan db:seed --class=DockerSuperAdminSeeder --force || true
+fi
+
 # Otimizacoes
 php artisan optimize || true
 

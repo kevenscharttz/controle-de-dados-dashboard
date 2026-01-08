@@ -15,7 +15,7 @@ class DashboardPolicy
     public function viewAny(AuthUser $authUser): bool
     {
         // Super-admin pode tudo
-        if (method_exists($authUser, 'hasRole') && $authUser->hasRole('super-admin')) {
+        if (method_exists($authUser, 'hasRole') && ($authUser->hasRole('super_admin') || $authUser->hasRole('super-admin'))) {
             return true;
         }
         return $authUser->can('ViewAny:Dashboard');
@@ -24,7 +24,7 @@ class DashboardPolicy
     public function view(AuthUser $authUser, Dashboard $dashboard): bool
     {
         // Super-admin pode tudo
-        if (method_exists($authUser, 'hasRole') && $authUser->hasRole('super-admin')) {
+        if (method_exists($authUser, 'hasRole') && ($authUser->hasRole('super_admin') || $authUser->hasRole('super-admin'))) {
             return true;
         }
 
@@ -53,7 +53,7 @@ class DashboardPolicy
     public function create(AuthUser $authUser): bool
     {
         // Super-admin pode tudo
-        if (method_exists($authUser, 'hasRole') && $authUser->hasRole('super-admin')) {
+        if (method_exists($authUser, 'hasRole') && ($authUser->hasRole('super_admin') || $authUser->hasRole('super-admin'))) {
             return true;
         }
         return $authUser->can('Create:Dashboard');
@@ -62,7 +62,7 @@ class DashboardPolicy
     public function update(AuthUser $authUser, Dashboard $dashboard): bool
     {
         // Super-admin pode tudo
-        if (method_exists($authUser, 'hasRole') && $authUser->hasRole('super-admin')) {
+        if (method_exists($authUser, 'hasRole') && ($authUser->hasRole('super_admin') || $authUser->hasRole('super-admin'))) {
             return true;
         }
         // Manager só pode editar dashboards da sua organização

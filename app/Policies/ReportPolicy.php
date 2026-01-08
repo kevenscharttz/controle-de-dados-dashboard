@@ -14,7 +14,7 @@ class ReportPolicy
     public function viewAny(User $user): bool
     {
         // Super-admin pode tudo
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin') || $user->hasRole('super-admin')) {
             return true;
         }
         // Organization-manager e usuários podem listar relatórios
@@ -27,7 +27,7 @@ class ReportPolicy
     public function view(User $user, Report $report): bool
     {
         // Super-admin pode ver tudo
-        if (method_exists($user, 'hasRole') && ($user->hasRole('super-admin') || $user->hasRole('super_admin'))) {
+        if (method_exists($user, 'hasRole') && ($user->hasRole('super_admin') || $user->hasRole('super-admin'))) {
             return true;
         }
 
@@ -57,7 +57,7 @@ class ReportPolicy
     public function create(User $user): bool
     {
         // Super-admin pode criar
-        if ($user->hasRole('super-admin') || $user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin') || $user->hasRole('super-admin')) {
             return true;
         }
 
@@ -71,7 +71,7 @@ class ReportPolicy
     public function update(User $user, Report $report): bool
     {
         // Super-admin pode editar tudo
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin') || $user->hasRole('super-admin')) {
             return true;
         }
 
@@ -89,7 +89,7 @@ class ReportPolicy
     public function delete(User $user, Report $report): bool
     {
         // Super-admin pode deletar tudo
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin') || $user->hasRole('super-admin')) {
             return true;
         }
 
@@ -106,7 +106,7 @@ class ReportPolicy
      */
     public function restore(User $user, Report $report): bool
     {
-        return $user->hasRole('super-admin');
+    return $user->hasRole('super_admin') || $user->hasRole('super-admin');
     }
 
     /**
@@ -114,6 +114,6 @@ class ReportPolicy
      */
     public function forceDelete(User $user, Report $report): bool
     {
-        return $user->hasRole('super-admin');
+    return $user->hasRole('super_admin') || $user->hasRole('super-admin');
     }
 }

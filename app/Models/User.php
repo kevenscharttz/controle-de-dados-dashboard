@@ -31,7 +31,8 @@ class User extends Authenticatable
             // Impedir que não-super-admin atribua role super-admin indevidamente
             static::saving(function (User $user) {
                 $actor = auth()->user();
-                if ($actor && method_exists($actor, 'hasRole') && ! $actor->hasRole('super-admin')) {
+                $actorIsSuper = $actor && method_exists($actor, 'hasRole') && ($actor->hasRole('super_admin') || $actor->hasRole('super-admin'));
+                if ($actor && ! $actorIsSuper) {
                     // Se o usuário já existe e tentarem sincronizar a role super-admin via formulário/relationship
                     if ($user->exists) {
                         // Remover pending super-admin do relation atribuído (post-save sincroniza via Filament)
@@ -42,10 +43,16 @@ class User extends Authenticatable
 
             static::saved(function (User $user) {
                 $actor = auth()->user();
-                if ($actor && method_exists($actor, 'hasRole') && ! $actor->hasRole('super-admin')) {
+                $actorIsSuper = $actor && method_exists($actor, 'hasRole') && ($actor->hasRole('super_admin') || $actor->hasRole('super-admin'));
+                if ($actor && ! $actorIsSuper) {
                     // Se por algum motivo a role super-admin foi atribuída, removê-la
-                    if (method_exists($user, 'hasRole') && $user->hasRole('super-admin')) {
-                        $user->removeRole('super-admin');
+                    if (method_exists($user, 'hasRole') && ($user->hasRole('super_admin') || $user->hasRole('super-admin'))) {
+                        if ($user->hasRole('super_admin')) {
+                            $user->removeRole('super_admin');
+                        }
+                        if ($user->hasRole('super-admin')) {
+                            $user->removeRole('super-admin');
+                        }
                     }
                 }
             });

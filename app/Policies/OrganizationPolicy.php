@@ -21,7 +21,7 @@ class OrganizationPolicy
     public function view(AuthUser $authUser, Organization $organization): bool
     {
         // Super-admin pode tudo
-        if (method_exists($authUser, 'hasRole') && $authUser->hasRole('super-admin')) {
+        if (method_exists($authUser, 'hasRole') && ($authUser->hasRole('super_admin') || $authUser->hasRole('super-admin'))) {
             return true;
         }
         // Apenas pode ver organizações às quais pertence
@@ -37,7 +37,7 @@ class OrganizationPolicy
     public function update(AuthUser $authUser, Organization $organization): bool
     {
         // Super-admin pode tudo
-        if (method_exists($authUser, 'hasRole') && $authUser->hasRole('super-admin')) {
+        if (method_exists($authUser, 'hasRole') && ($authUser->hasRole('super_admin') || $authUser->hasRole('super-admin'))) {
             return true;
         }
         // Manager só pode editar sua própria organização
