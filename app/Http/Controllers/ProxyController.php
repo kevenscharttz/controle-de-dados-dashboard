@@ -195,9 +195,18 @@ class ProxyController extends Controller
         $originPath = '/' . ltrim($path, '/');
 
         if (is_string($body) && (str_contains($contentType, 'text/html') || str_contains($contentType, 'text/css') || str_contains($contentType, 'application/javascript'))) {
-            // Strip inline meta CSP to reduce iframe blocking
+            // Strip inline meta CSP to reduce iframe blocking and ensure base href
             if (str_contains($contentType, 'text/html')) {
                 $body = preg_replace('#<meta\s+http-equiv=[\"\']Content-Security-Policy[\"\'][^>]*>#i', '', $body);
+                // Inject <base href> so SPA routers and relative imports resolve under the proxy path
+                if (!preg_match('#<base\s+href=#i', $body)) {
+                    $baseTag = '<base href="' . htmlspecialchars($proxyBase . '/', ENT_QUOTES) . '">';
+                    $countBase = 0;
+                    $body = preg_replace('~(<head[^>]*>)~i', '$1' . $baseTag, $body, 1, $countBase);
+                    if ($countBase === 0) {
+                        $body = preg_replace('~(<body[^>]*>)~i', '$1' . $baseTag, $body, 1);
+                    }
+                }
             }
 
             // Helper to absolutize relative paths against originPath
