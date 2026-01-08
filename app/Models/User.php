@@ -7,11 +7,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, HasPanelShield;
 
     /**
      * The attributes that are mass assignable.
@@ -23,6 +26,23 @@ class User extends Authenticatable
         'email',
         'password',
     ];
+
+    /**
+     * Explicitly allow Filament panel access for super_admin, super-admin, or panel_user roles.
+     * Shield's HasPanelShield also provides this, but we ensure clarity and compatibility.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if (method_exists($this, 'hasRole')) {
+            if ($this->hasRole('super_admin') || $this->hasRole('super-admin')) {
+                return true;
+            }
+            if ($this->hasRole(config('filament-shield.panel_user.name', 'panel_user'))) {
+                return true;
+            }
+        }
+        return false;
+    }
 
         protected static function boot()
         {

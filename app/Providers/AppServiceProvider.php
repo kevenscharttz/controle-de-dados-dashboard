@@ -29,5 +29,23 @@ class AppServiceProvider extends ServiceProvider
                 \Log::warning('Falha ao criar storage:link automaticamente: '.$e->getMessage());
             }
         }
+
+        // Fallback: garantir que o usuário admin tenha role super_admin em produção
+        // Útil em plataformas sem shell (Render free), idempotente e leve.
+        if ($this->app->environment('production')) {
+            try {
+                $email = env('DOCKER_ADMIN_EMAIL') ?? env('ADMIN_EMAIL', 'admin@example.com');
+                /** @var \App\Models\User|null $admin */
+                $admin = \App\Models\User::where('email', $email)->first();
+                if ($admin && method_exists($admin, 'hasRole') && ! ($admin->hasRole('super_admin') || $admin->hasRole('super-admin'))) {
+                    // Cria a role se não existir e atribui
+                    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin']);
+                    $admin->assignRole($role);
+                }
+            } catch (\Throwable $e) {
+                // Silencioso para não quebrar boot; loga se necessário
+                \Log::warning('Falha no fallback de super_admin: '.$e->getMessage());
+            }
+        }
     }
 }
