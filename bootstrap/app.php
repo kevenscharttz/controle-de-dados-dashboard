@@ -13,9 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-    // Trust reverse proxies (e.g., Render) so HTTPS scheme and host are detected correctly
-    // Use Symfony's Request header bitmask constants
-    $middleware->trustProxies(at: '*', headers: SymfonyRequest::HEADER_X_FORWARDED_ALL);
+        // Trust reverse proxies (e.g., Render) so HTTPS scheme and host are detected correctly
+        // Use Symfony's Request header bitmask combining the forwarded headers we care about
+        $middleware->trustProxies(
+            at: '*',
+            headers: SymfonyRequest::HEADER_X_FORWARDED_FOR
+                | SymfonyRequest::HEADER_X_FORWARDED_HOST
+                | SymfonyRequest::HEADER_X_FORWARDED_PROTO
+                | SymfonyRequest::HEADER_X_FORWARDED_PORT
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
