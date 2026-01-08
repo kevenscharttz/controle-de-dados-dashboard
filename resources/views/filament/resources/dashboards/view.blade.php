@@ -1,4 +1,12 @@
 <x-filament-panels::page>
+    @php
+        $rawUrl = $dashboard->url;
+        $isSecureRequest = request()->isSecure();
+        $isHttpUrl = is_string($rawUrl) && str_starts_with($rawUrl, 'http://');
+        // Tenta "forçar" https apenas se a URL é http e estamos em produção/https
+        $tryHttpsUrl = $isHttpUrl ? preg_replace('/^http:\/\//i', 'https://', $rawUrl) : $rawUrl;
+        $embedUrl = $tryHttpsUrl;
+    @endphp
     <div class="space-y-6">
         <!-- TAGS/BADGES -->
         <div class="flex flex-wrap gap-2">
@@ -9,7 +17,7 @@
         </div>
 
         <!-- CONTAINER DO DASHBOARD -->
-        <div x-data="{ loaded: false }" class="relative w-full bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div x-data="{ loaded: false, error: false }" x-init="setTimeout(() => { if (!loaded) error = true }, 8000)" class="relative w-full bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
             <!-- Botões de ação -->
             <div class="flex justify-end p-4">
                 <div class="flex gap-4">
@@ -21,6 +29,18 @@
                     </button>
                 </div>
             </div>
+            @if ($isSecureRequest && $isHttpUrl)
+                <div class="px-4 pb-2">
+                    <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200 p-4 text-sm">
+                        <strong>Atenção:</strong> este dashboard está em <code>http://</code> e a aplicação está em <code>https://</code>. Navegadores bloqueiam iframes inseguros por motivo de segurança.
+                        <div class="mt-2 flex flex-wrap gap-3">
+                            <a href="{{ $embedUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-black dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">Abrir em nova aba</a>
+                            <a href="{{ $tryHttpsUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Tentar via HTTPS</a>
+                        </div>
+                        <div class="mt-2 text-xs opacity-80">Para funcionar embutido, publique o Metabase atrás de HTTPS (ex.: domínio com TLS ou proxy reverso) e atualize a URL do dashboard para <code>https://</code>.</div>
+                    </div>
+                </div>
+            @endif
             <!-- LOADER COM ANIMAÇÃO -->
             <div x-show="!loaded" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 z-10"
                 x-transition:leave="transition ease-in duration-300"
@@ -50,12 +70,24 @@
             <!-- IFRAME RESPONSIVO -->
             <iframe
                 id="dashboardFrame"
-                src="{{ $dashboard->url }}"
+                src="{{ $embedUrl }}"
                 class="w-full h-[70vh] sm:h-[75vh] lg:h-[80vh] border-0 block"
                 loading="lazy"
                 x-on:load="loaded = true"
+                x-on:error="error = true"
                 allow="fullscreen"
             ></iframe>
+            <template x-if="error">
+                <div class="absolute inset-0 flex items-center justify-center p-6">
+                    <div class="max-w-md text-center rounded-lg border border-red-300 bg-red-50 text-red-900 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200 p-5">
+                        <div class="font-semibold mb-1">Não foi possível carregar o dashboard embutido.</div>
+                        <div class="text-sm">Se a URL estiver em <code>http://</code>, o navegador bloqueia por segurança quando a aplicação está em <code>https://</code>.</div>
+                        <div class="mt-3">
+                            <a href="{{ $embedUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-slate-900 text-white hover:bg-black dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">Abrir em nova aba</a>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <!-- INFORMAÇÕES RODAPÉ -->
