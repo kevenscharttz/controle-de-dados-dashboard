@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
-@import '../../../../vendor/filament/filament/resources/css/theme.css';
+/* Use absolute path so Vite can resolve vendor assets reliably */
+@import '/vendor/filament/filament/resources/css/theme.css';
 
-@source '../../../../app/Filament';
-@source '../../../../resources/views/filament';
+/* Removed Tailwind v4 @source directives to avoid parser errors in production */
 
 :root {
     --fi-font-family: 'Inter', sans-serif;
