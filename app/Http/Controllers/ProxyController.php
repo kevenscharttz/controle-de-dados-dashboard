@@ -259,9 +259,11 @@ class ProxyController extends Controller
                 return $m[1] . '=' . $m[2] . $rewriteToUniversal($m[3]) . $m[2];
             }, $body);
 
-            // href/src with relative (no leading /)
-            $body = preg_replace_callback('#(href|src)=(["\'])(?!data:|mailto:|javascript:|https?://|//|/)([^"\']+)\2#i', function ($m) use ($absolutize, $rewriteToUniversal) {
-                return $m[1] . '=' . $m[2] . $rewriteToUniversal($absolutize($m[3])) . $m[2];
+            // href/src with relative (no leading /) -> resolve against proxy base rather than upstream path
+            $body = preg_replace_callback('#(href|src)=(["\'])(?!data:|mailto:|javascript:|https?://|//|/)([^"\']+)\2#i', function ($m) use ($proxyBase) {
+                $rel = trim($m[3]);
+                $proxied = rtrim($proxyBase, '/') . '/' . $rel;
+                return $m[1] . '=' . $m[2] . $proxied . $m[2];
             }, $body);
 
             // CSS url(/x)
@@ -277,9 +279,10 @@ class ProxyController extends Controller
                 return 'url(' . $rewriteToUniversal($m[2]) . ')';
             }, $body);
 
-            // CSS url(relative)
-            $body = preg_replace_callback('#url\((\s*)(?!data:|https?://|//|/)([^)\s"\']+)(\s*)\)#i', function ($m) use ($absolutize, $rewriteToUniversal) {
-                return 'url(' . $rewriteToUniversal($absolutize($m[2])) . ')';
+            // CSS url(relative) -> resolve against proxy base
+            $body = preg_replace_callback('#url\((\s*)(?!data:|https?://|//|/)([^)\s"\']+)(\s*)\)#i', function ($m) use ($proxyBase) {
+                $rel = trim($m[2]);
+                return 'url(' . rtrim($proxyBase, '/') . '/' . $rel . ')';
             }, $body);
 
             // Inject JS shim to rewrite fetch/XMLHttpRequest to universal proxy (handles runtime API calls)
