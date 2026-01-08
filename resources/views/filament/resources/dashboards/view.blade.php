@@ -1,4 +1,17 @@
 <x-filament-panels::page>
+    @php
+        $rawUrl = $record->url ?? '';
+        $iframeUrl = $rawUrl;
+        $isSecure = request()->isSecure();
+        $isHttp = is_string($rawUrl) && str_starts_with($rawUrl, 'http://');
+        $proxyEnabled = (bool) config('services.metabase.proxy_enabled');
+        $proxyBase = rtrim((string) config('services.metabase.proxy_base'), '/');
+        if ($isSecure && $isHttp && $proxyEnabled && $proxyBase && str_starts_with($rawUrl, $proxyBase)) {
+            $rawPath = ltrim(substr($rawUrl, strlen($proxyBase)), '/');
+            $query = parse_url($rawUrl, PHP_URL_QUERY);
+            $iframeUrl = route('proxy.metabase', ['path' => $rawPath]) . ($query ? ('?' . $query) : '');
+        }
+    @endphp
         <div class="space-y-6">
             <!-- TAGS/BADGES -->
             <div class="flex flex-wrap gap-2">
@@ -11,7 +24,7 @@
             </div>
 
             <!-- CONTAINER DO DASHBOARD -->
-            <div x-data="{ loaded: false }" class="relative w-full bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div x-data="{ loaded: false, erro: false }" x-init="setTimeout(() => { if (!loaded) erro = true }, 10000)" class="relative w-full bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <!-- Botões de ação -->
                 <div class="flex justify-end p-4">
                     <div class="flex gap-4">
@@ -49,10 +62,32 @@
                         </div>
                     </div>
                 </div>
+                <!-- ERRO / DICA QUANDO IFRAME NÃO CARREGA -->
+                <div x-show="erro && !loaded" class="absolute inset-0 flex items-center justify-center z-20">
+                    <div class="mx-4 max-w-lg w-full rounded-lg border border-amber-300 bg-amber-50/90 p-4 text-amber-900 shadow">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 19.07A10 10 0 1119.07 4.93 10 10 0 014.93 19.07z" />
+                            </svg>
+                            <div class="space-y-2">
+                                <p class="font-medium">Não foi possível carregar o dashboard dentro do painel.</p>
+                                <ul class="list-disc pl-5 text-sm space-y-1">
+                                    <li>Se o painel estiver em HTTPS e o link do dashboard for HTTP, o navegador bloqueia por segurança (mixed content).</li>
+                                    <li>Alguns serviços bloqueiam incorporação via X-Frame-Options ou Content-Security-Policy.</li>
+                                </ul>
+                                <div class="flex gap-2 pt-2">
+                                    <a href="{{ $record->url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
+                                        Abrir em nova aba
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <!-- IFRAME RESPONSIVO -->
                 <iframe
                     id="dashboardFrame"
-                    src="{{ $record->url }}"
+                    src="{{ $iframeUrl }}"
                     class="w-full h-[70vh] sm:h-[75vh] lg:h-[80vh] border-0 block"
                     loading="lazy"
                     x-on:load="loaded = true"

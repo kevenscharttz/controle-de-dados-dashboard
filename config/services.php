@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    // Optional internal proxy to embed HTTP dashboards in HTTPS panel safely
+    'metabase' => [
+        // Enable proxy behavior (false by default)
+        'proxy_enabled' => env('METABASE_PROXY_ENABLED', false),
+        // Upstream base URL (scheme+host[:port]), e.g. http://metabase.internal:3000
+        'proxy_base' => env('METABASE_PROXY_BASE'),
+        // Comma-separated allowed hosts for safety, e.g. "metabase.internal,metabase.example.com"
+        'allowed_hosts' => array_values(array_filter(array_map('trim', explode(',', env('METABASE_ALLOWED_HOSTS', ''))))),
+    ],
+
 ];
