@@ -35,7 +35,7 @@ class PlatformRolesAndPermissionsSeeder extends Seeder
         $allPermissions = Permission::all();
 
         // Super admin -> all permissions
-        $super = Role::firstOrCreate(['name' => 'super-admin']);
+        $super = Role::firstOrCreate(['name' => 'super_admin']);
         $super->syncPermissions($allPermissions);
 
         // Organization manager -> org + dashboard + report + user management within org

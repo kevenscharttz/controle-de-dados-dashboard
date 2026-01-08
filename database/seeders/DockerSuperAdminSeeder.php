@@ -34,9 +34,9 @@ class DockerSuperAdminSeeder extends Seeder
 
         // Ensure role exists and assign it
         try {
-            $role = Role::firstOrCreate(['name' => 'super-admin']);
-            if (! $user->hasRole('super-admin')) {
-                $user->assignRole('super-admin');
+            $role = Role::firstOrCreate(['name' => 'super_admin']);
+            if (! $user->hasRole('super_admin')) {
+                $user->assignRole('super_admin');
             }
         } catch (\Throwable $e) {
             // Spatie tables may not be present or package not installed; ignore gracefully
