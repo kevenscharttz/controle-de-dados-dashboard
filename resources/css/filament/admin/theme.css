@@ -1,7 +1,12 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 /* Use package alias so Vite bundles Filament base styles into the output */
+/* Imports must come first to satisfy CSS rules (@import before @layer) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+/* Include Filament base theme so components render styled in production */
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
+/* Tailwind v4 entry (expands to @layer directives). Keep AFTER other @imports. */
+@import "tailwindcss";
 
 /* Removed Tailwind v4 @source directives to avoid parser errors in production */
 
