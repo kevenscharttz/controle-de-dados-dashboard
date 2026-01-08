@@ -3,12 +3,14 @@
         $rawUrl = $record->url ?? '';
         $isSecure = request()->isSecure() || strtolower(request()->header('x-forwarded-proto', '')) === 'https';
         $iframeUrl = $rawUrl;
-        if ($isSecure && is_string($rawUrl) && str_starts_with($rawUrl, 'http://')) {
+        $isHttpLike = is_string($rawUrl) && (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://'));
+        if ($isSecure && $isHttpLike) {
             $p = parse_url($rawUrl);
+            $scheme = strtolower($p['scheme'] ?? 'http');
             $host = ($p['host'] ?? '') . (isset($p['port']) ? (':' . $p['port']) : '');
             $path = ltrim($p['path'] ?? '', '/');
             $query = isset($p['query']) ? ('?' . $p['query']) : '';
-            $iframeUrl = route('proxy.universal', ['scheme' => 'http', 'host' => $host, 'path' => $path]) . $query;
+            $iframeUrl = route('proxy.universal', ['scheme' => $scheme, 'host' => $host, 'path' => $path]) . $query;
         }
     @endphp
     <div class="space-y-6">

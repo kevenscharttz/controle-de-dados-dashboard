@@ -3,16 +3,15 @@
         $rawUrl = $record->url ?? '';
         $iframeUrl = $rawUrl;
     $isSecure = request()->isSecure() || strtolower(request()->header('x-forwarded-proto', '')) === 'https';
-        $isHttp = is_string($rawUrl) && str_starts_with($rawUrl, 'http://');
-        $proxyEnabled = (bool) config('services.metabase.proxy_enabled');
-        $proxyBase = rtrim((string) config('services.metabase.proxy_base'), '/');
-        if ($isSecure && $isHttp) {
-            // Use universal path-preserving proxy to keep relative imports working
+        $isHttpLike = is_string($rawUrl) && (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://'));
+        if ($isSecure && $isHttpLike) {
+            // Always use the universal proxy for external http(s) links to avoid X-Frame-Options/CSP/mixed content
             $p = parse_url($rawUrl);
+            $scheme = strtolower($p['scheme'] ?? 'http');
             $host = ($p['host'] ?? '') . (isset($p['port']) ? (':' . $p['port']) : '');
             $path = ltrim($p['path'] ?? '', '/');
             $query = isset($p['query']) ? ('?' . $p['query']) : '';
-            $iframeUrl = route('proxy.universal', ['scheme' => 'http', 'host' => $host, 'path' => $path]) . $query;
+            $iframeUrl = route('proxy.universal', ['scheme' => $scheme, 'host' => $host, 'path' => $path]) . $query;
         }
     @endphp
         <div class="space-y-6">
