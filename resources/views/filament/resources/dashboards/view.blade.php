@@ -7,8 +7,12 @@
         $proxyEnabled = (bool) config('services.metabase.proxy_enabled');
         $proxyBase = rtrim((string) config('services.metabase.proxy_base'), '/');
         if ($isSecure && $isHttp) {
-            // Prefer zero-config generic proxy
-            $iframeUrl = route('proxy.fetch') . '?url=' . urlencode($rawUrl);
+            // Use universal path-preserving proxy to keep relative imports working
+            $p = parse_url($rawUrl);
+            $host = ($p['host'] ?? '') . (isset($p['port']) ? (':' . $p['port']) : '');
+            $path = ltrim($p['path'] ?? '', '/');
+            $query = isset($p['query']) ? ('?' . $p['query']) : '';
+            $iframeUrl = route('proxy.universal', ['scheme' => 'http', 'host' => $host, 'path' => $path]) . $query;
         }
     @endphp
         <div class="space-y-6">

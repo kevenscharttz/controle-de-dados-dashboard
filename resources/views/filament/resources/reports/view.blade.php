@@ -4,7 +4,11 @@
         $isSecure = request()->isSecure() || strtolower(request()->header('x-forwarded-proto', '')) === 'https';
         $iframeUrl = $rawUrl;
         if ($isSecure && is_string($rawUrl) && str_starts_with($rawUrl, 'http://')) {
-            $iframeUrl = route('proxy.fetch') . '?url=' . urlencode($rawUrl);
+            $p = parse_url($rawUrl);
+            $host = ($p['host'] ?? '') . (isset($p['port']) ? (':' . $p['port']) : '');
+            $path = ltrim($p['path'] ?? '', '/');
+            $query = isset($p['query']) ? ('?' . $p['query']) : '';
+            $iframeUrl = route('proxy.universal', ['scheme' => 'http', 'host' => $host, 'path' => $path]) . $query;
         }
     @endphp
     <div class="space-y-6">

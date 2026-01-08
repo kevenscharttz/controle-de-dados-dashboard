@@ -145,6 +145,143 @@ class ProxyController extends Controller
         ]);
     }
 
+    /**
+     * Path-preserving universal proxy. Keeps scheme/host/path in URL so browsers
+     * resolve relative module imports and assets naturally. Example:
+     *   /proxy/u/http/example.com/app.js -> upstream http://example.com/app.js
+     */
+    public function universal(Request $request, string $scheme, string $host, string $path = '')
+    {
+        $scheme = strtolower($scheme);
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            abort(400, 'Invalid scheme');
+        }
+
+        $hostParam = $host;
+        // Extract host and optional port
+        $port = null;
+        if (str_contains($hostParam, ':')) {
+            [$hostParam, $port] = explode(':', $hostParam, 2);
+        }
+        $hostParam = strtolower($hostParam);
+        if ($hostParam === '' || preg_match('#\s#', $hostParam)) {
+            abort(400, 'Invalid host');
+        }
+
+        // SSRF protections: block localhost and private/reserved IPs
+        $blockedHosts = ['localhost', '127.0.0.1', '::1'];
+        if (in_array($hostParam, $blockedHosts, true)) {
+            abort(403);
+        }
+        $ips = @gethostbynamel($hostParam) ?: [];
+        foreach ($ips as $ip) {
+            if ($this->isPrivateOrReservedIp($ip)) {
+                abort(403);
+            }
+        }
+
+        $upstream = $scheme . '://' . $hostParam . ($port ? (':' . $port) : '') . '/' . ltrim($path, '/');
+        $qs = $request->getQueryString();
+        if ($qs) {
+            $upstream .= '?' . $qs;
+        }
+
+        $resp = Http::withHeaders([
+            'Accept' => '*/*',
+            'User-Agent' => 'DashboardProxy/1.0',
+        ])->get($upstream);
+
+        $status = $resp->status();
+        $contentType = $resp->header('Content-Type', 'text/html; charset=UTF-8');
+        $body = $resp->body();
+
+        $proxyBase = url('/proxy/u/' . $scheme . '/' . $host);
+        $originWithPort = $scheme . '://' . $host;
+        $originPath = '/' . ltrim($path, '/');
+
+        if (is_string($body) && (str_contains($contentType, 'text/html') || str_contains($contentType, 'text/css') || str_contains($contentType, 'application/javascript'))) {
+            // Strip inline meta CSP to reduce iframe blocking
+            if (str_contains($contentType, 'text/html')) {
+                $body = preg_replace('#<meta\s+http-equiv=[\"\']Content-Security-Policy[\"\'][^>]*>#i', '', $body);
+            }
+
+            // Helper to absolutize relative paths against originPath
+            $absolutize = function (string $relative) use ($originWithPort, $originPath) {
+                $relative = trim($relative);
+                if ($relative === '' || $relative[0] === '#') return $relative;
+                if (preg_match('#^(?:data:|mailto:|javascript:)#i', $relative)) return $relative;
+                if (str_starts_with($relative, '//')) {
+                    return 'https:' . $relative;
+                }
+                if (preg_match('#^https?://#i', $relative)) return $relative;
+                if ($relative[0] === '/') {
+                    return $originWithPort . $relative;
+                }
+                $baseDir = rtrim(str_replace('\\', '/', dirname($originPath)), '/');
+                if ($baseDir === '') $baseDir = '/';
+                $combined = $baseDir . '/' . $relative;
+                $segments = [];
+                foreach (explode('/', $combined) as $seg) {
+                    if ($seg === '' || $seg === '.') continue;
+                    if ($seg === '..') { array_pop($segments); continue; }
+                    $segments[] = $seg;
+                }
+                $normalized = '/' . implode('/', $segments);
+                return $originWithPort . $normalized;
+            };
+
+            $rewriteToUniversal = function (string $url) {
+                $p = parse_url($url);
+                if (!$p || empty($p['scheme']) || empty($p['host'])) return $url;
+                $scheme2 = strtolower($p['scheme']);
+                $host2 = $p['host'] . (isset($p['port']) ? (':' . $p['port']) : '');
+                $path2 = '/' . ltrim($p['path'] ?? '/', '/');
+                $query2 = isset($p['query']) ? ('?' . $p['query']) : '';
+                return url('/proxy/u/' . $scheme2 . '/' . $host2 . $path2) . $query2;
+            };
+
+            // href/src with root-relative
+            $body = preg_replace('#(href|src)=["\'](\/[^"\']*)["\']#i', '$1="' . $proxyBase . '$2"', $body);
+
+            // href/src with protocol-relative //host/... => https
+            $body = preg_replace_callback('#(href|src)=(["\'])(\/\/[^"\']*)\2#i', function ($m) use ($rewriteToUniversal) {
+                return $m[1] . '=' . $m[2] . $rewriteToUniversal('https:' . $m[3]) . $m[2];
+            }, $body);
+
+            // href/src with absolute http(s)
+            $body = preg_replace_callback('#(href|src)=(["\'])(https?:\/\/[^"\']*)\2#i', function ($m) use ($rewriteToUniversal) {
+                return $m[1] . '=' . $m[2] . $rewriteToUniversal($m[3]) . $m[2];
+            }, $body);
+
+            // href/src with relative (no leading /)
+            $body = preg_replace_callback('#(href|src)=(["\'])(?!data:|mailto:|javascript:|https?://|//|/)([^"\']+)\2#i', function ($m) use ($absolutize, $rewriteToUniversal) {
+                return $m[1] . '=' . $m[2] . $rewriteToUniversal($absolutize($m[3])) . $m[2];
+            }, $body);
+
+            // CSS url(/x)
+            $body = preg_replace('#url\((\s*)(/[^)\s"\']+)(\s*)\)#i', 'url(' . $proxyBase . '$2)', $body);
+
+            // CSS url(//host/...) => https
+            $body = preg_replace_callback('#url\((\s*)(//[^)\s"\']+)(\s*)\)#i', function ($m) use ($rewriteToUniversal) {
+                return 'url(' . $rewriteToUniversal('https:' . $m[2]) . ')';
+            }, $body);
+
+            // CSS url(http...)
+            $body = preg_replace_callback('#url\((\s*)(https?:[^)\s"\']+)(\s*)\)#i', function ($m) use ($rewriteToUniversal) {
+                return 'url(' . $rewriteToUniversal($m[2]) . ')';
+            }, $body);
+
+            // CSS url(relative)
+            $body = preg_replace_callback('#url\((\s*)(?!data:|https?://|//|/)([^)\s"\']+)(\s*)\)#i', function ($m) use ($absolutize, $rewriteToUniversal) {
+                return 'url(' . $rewriteToUniversal($absolutize($m[2])) . ')';
+            }, $body);
+        }
+
+        return response($body, $status)->withHeaders([
+            'Content-Type' => $contentType,
+        ]);
+    }
+
     private function isPrivateOrReservedIp(string $ip): bool
     {
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
