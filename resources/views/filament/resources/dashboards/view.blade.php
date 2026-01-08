@@ -8,10 +8,13 @@
             // Always use the universal proxy for external http(s) links to avoid X-Frame-Options/CSP/mixed content
             $p = parse_url($rawUrl);
             $scheme = strtolower($p['scheme'] ?? 'http');
-            $host = ($p['host'] ?? '') . (isset($p['port']) ? (':' . $p['port']) : '');
+            $host = ($p['host'] ?? '');
+            $port = isset($p['port']) ? (string) $p['port'] : null;
             $path = ltrim($p['path'] ?? '', '/');
             $query = isset($p['query']) ? ('?' . $p['query']) : '';
-            $iframeUrl = route('proxy.universal', ['scheme' => $scheme, 'host' => $host, 'path' => $path]) . $query;
+            $params = ['scheme' => $scheme, 'host' => $host, 'path' => $path];
+            if ($port) { $params['port'] = $port; }
+            $iframeUrl = route('proxy.universal', $params) . $query;
         }
     @endphp
         <div class="space-y-6">

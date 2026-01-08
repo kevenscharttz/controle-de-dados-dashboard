@@ -29,8 +29,13 @@ Route::middleware(['auth'])
     ->get('/proxy/fetch', [ProxyController::class, 'fetch'])
     ->name('proxy.fetch');
 
-// Universal path-preserving proxy for any scheme/host/path
+// Universal path-preserving proxy for any scheme/host/port/path
 Route::middleware(['auth'])
-    ->get('/proxy/u/{scheme}/{host}/{path?}', [ProxyController::class, 'universal'])
-    ->where(['scheme' => 'https?|http', 'path' => '.*'])
+    ->get('/proxy/u/{scheme}/{host}/{port?}/{path?}', [ProxyController::class, 'universal'])
+    ->where([
+        'scheme' => 'https|http',
+        'host' => '[^/]+',
+        'port' => '\\d+',
+        'path' => '.*',
+    ])
     ->name('proxy.universal');

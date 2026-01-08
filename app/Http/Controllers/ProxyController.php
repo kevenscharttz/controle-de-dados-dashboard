@@ -150,7 +150,7 @@ class ProxyController extends Controller
      * resolve relative module imports and assets naturally. Example:
      *   /proxy/u/http/example.com/app.js -> upstream http://example.com/app.js
      */
-    public function universal(Request $request, string $scheme, string $host, string $path = '')
+    public function universal(Request $request, string $scheme, string $host, ?string $port = null, string $path = '')
     {
         $scheme = strtolower($scheme);
         if (!in_array($scheme, ['http', 'https'], true)) {
@@ -158,11 +158,6 @@ class ProxyController extends Controller
         }
 
         $hostParam = $host;
-        // Extract host and optional port
-        $port = null;
-        if (str_contains($hostParam, ':')) {
-            [$hostParam, $port] = explode(':', $hostParam, 2);
-        }
         $hostParam = strtolower($hostParam);
         if ($hostParam === '' || preg_match('#\s#', $hostParam)) {
             abort(400, 'Invalid host');
@@ -180,7 +175,7 @@ class ProxyController extends Controller
             }
         }
 
-        $upstream = $scheme . '://' . $hostParam . ($port ? (':' . $port) : '') . '/' . ltrim($path, '/');
+    $upstream = $scheme . '://' . $hostParam . ($port ? (':' . $port) : '') . '/' . ltrim($path, '/');
         $qs = $request->getQueryString();
         if ($qs) {
             $upstream .= '?' . $qs;
@@ -195,8 +190,8 @@ class ProxyController extends Controller
         $contentType = $resp->header('Content-Type', 'text/html; charset=UTF-8');
         $body = $resp->body();
 
-        $proxyBase = url('/proxy/u/' . $scheme . '/' . $host);
-        $originWithPort = $scheme . '://' . $host;
+    $proxyBase = url('/proxy/u/' . $scheme . '/' . $host . ($port ? '/' . $port : ''));
+    $originWithPort = $scheme . '://' . $hostParam . ($port ? ':' . $port : '');
         $originPath = '/' . ltrim($path, '/');
 
         if (is_string($body) && (str_contains($contentType, 'text/html') || str_contains($contentType, 'text/css') || str_contains($contentType, 'application/javascript'))) {
@@ -234,10 +229,12 @@ class ProxyController extends Controller
                 $p = parse_url($url);
                 if (!$p || empty($p['scheme']) || empty($p['host'])) return $url;
                 $scheme2 = strtolower($p['scheme']);
-                $host2 = $p['host'] . (isset($p['port']) ? (':' . $p['port']) : '');
+                $host2 = $p['host'];
+                $port2 = $p['port'] ?? null;
                 $path2 = '/' . ltrim($p['path'] ?? '/', '/');
                 $query2 = isset($p['query']) ? ('?' . $p['query']) : '';
-                return url('/proxy/u/' . $scheme2 . '/' . $host2 . $path2) . $query2;
+                $base = url('/proxy/u/' . $scheme2 . '/' . $host2 . ($port2 ? '/' . $port2 : '') . $path2);
+                return $base . $query2;
             };
 
             // href/src with root-relative
