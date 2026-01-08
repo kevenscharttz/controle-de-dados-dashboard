@@ -33,30 +33,36 @@ class UserForm
                     ->string()
                     ->minLength(8)
                     ->maxLength(100)
-                    ->dehydrateStateUsing(fn($state) => filled($state) ? bcrypt($state) : null)
+                    // Só dehidratar (salvar) se o campo estiver preenchido; evita sobrescrever com null no edit
+                    ->dehydrated(fn($state) => filled($state))
+                    ->dehydrateStateUsing(fn($state) => bcrypt($state))
                     ->required(fn($livewire) => $livewire instanceof \Filament\Resources\Pages\CreateRecord),
                 Select::make('role')
                     ->label('Função')
                     ->options(function () {
                         $current = Auth::user();
                         $all = Role::query()->pluck('name', 'id')->toArray();
-                        if ($current && method_exists($current, 'hasRole') && $current->hasRole('super-admin')) {
+                        $isSuper = $current && method_exists($current, 'hasRole') && ($current->hasRole('super-admin') || $current->hasRole('super_admin'));
+                        if ($isSuper) {
                             return $all;
                         }
-                        return collect($all)->reject(fn($name) => $name === 'super-admin')->toArray();
+                        // Para não-super, ocultar tanto 'super-admin' quanto 'super_admin'
+                        return collect($all)->reject(fn($name) => in_array($name, ['super-admin','super_admin'], true))->toArray();
                     })
                     ->searchable()
                     ->preload()
                     ->required()
                     ->afterStateUpdated(function ($state, $livewire) {
                     })
-                    ->dehydrateStateUsing(fn($state) => $state)
+                    // Não tentar salvar coluna inexistente 'role' na tabela users
+                    ->dehydrated(false)
                     ->saveRelationshipsUsing(function ($component, $record, $state) {
                         if ($state) {
                             $role = Role::find($state);
                             if ($role) {
                                 $actor = Auth::user();
-                                if ($role->name === 'super-admin' && (! $actor || ! $actor->hasRole('super-admin'))) {
+                                $actorIsSuper = $actor && method_exists($actor, 'hasRole') && ($actor->hasRole('super-admin') || $actor->hasRole('super_admin'));
+                                if (in_array($role->name, ['super-admin','super_admin'], true) && ! $actorIsSuper) {
                                     return;
                                 }
                                 $record->syncRoles([$role->name]);
