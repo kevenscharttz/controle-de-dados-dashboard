@@ -61,7 +61,11 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\DashboardsCountWidget::class,
                 \App\Filament\Widgets\RecentDashboardsWidget::class,
             ])
-            ->viteTheme('resources/css/filament/admin/theme.css')
+            // Carregar o tema do Filament e também o app.css para garantir todas as utilidades do Tailwind
+            ->viteTheme([
+                'resources/css/filament/admin/theme.css',
+                'resources/css/app.css',
+            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
