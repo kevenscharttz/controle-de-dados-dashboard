@@ -5,6 +5,9 @@ RUN apt-get update && apt-get install -y \
         git \
         curl \
         libpng-dev \
+        libwebp-dev \
+        libjpeg62-turbo-dev \
+        libfreetype6-dev \
         libonig-dev \
         libxml2-dev \
         zip \
@@ -12,14 +15,14 @@ RUN apt-get update && apt-get install -y \
         libpq-dev \
         libzip-dev \
         libicu-dev \
-    libsqlite3-dev \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # 2) Extensões PHP necessárias (inclui Postgres)
 RUN docker-php-ext-configure intl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
-             pdo_pgsql pdo_sqlite sqlite3 bcmath mbstring intl zip gd
+             pdo_pgsql bcmath mbstring intl zip gd
 
 # 3) Node.js 20 para build do front-end
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
