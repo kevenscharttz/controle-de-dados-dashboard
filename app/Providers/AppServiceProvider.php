@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,6 +34,13 @@ class AppServiceProvider extends ServiceProvider
         // Fallback: garantir que o usuário admin tenha role super_admin em produção
         // Útil em plataformas sem shell (Render free), idempotente e leve.
         if ($this->app->environment('production')) {
+            // Forçar HTTPS em produção para evitar mixed content (Render usa HTTPS)
+            try {
+                URL::forceScheme('https');
+            } catch (\Throwable $e) {
+                \Log::warning('Falha ao forcar esquema https: '.$e->getMessage());
+            }
+
             try {
                 $email = env('DOCKER_ADMIN_EMAIL') ?? env('ADMIN_EMAIL', 'admin@example.com');
                 /** @var \App\Models\User|null $admin */
