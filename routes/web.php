@@ -11,3 +11,8 @@ Route::get('/login', function () {
 Route::get('/', function () {
     return Auth::check() ? redirect('/painel') : view('landing');
 });
+
+// Healthcheck endpoint for Render
+Route::get('/healthz', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
