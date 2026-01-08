@@ -34,11 +34,19 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         if (method_exists($this, 'hasRole')) {
-            if ($this->hasRole('super_admin') || $this->hasRole('super-admin')) {
-                return true;
-            }
-            if ($this->hasRole(config('filament-shield.panel_user.name', 'panel_user'))) {
-                return true;
+            $allowedRoles = [
+                'super_admin',
+                'super-admin',
+                // Permitir acesso para gerentes de organização
+                'organization-manager',
+                // Papel genérico configurável do Shield para acesso ao painel
+                config('filament-shield.panel_user.name', 'panel_user'),
+            ];
+
+            foreach ($allowedRoles as $role) {
+                if ($this->hasRole($role)) {
+                    return true;
+                }
             }
         }
         return false;
