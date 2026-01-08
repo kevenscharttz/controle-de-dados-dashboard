@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,8 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Trust reverse proxies (e.g., Render) so HTTPS scheme and host are detected correctly
-        $middleware->trustProxies(at: '*', headers: Request::HEADER_X_FORWARDED_ALL);
+    // Trust reverse proxies (e.g., Render) so HTTPS scheme and host are detected correctly
+    // Use Symfony's Request header bitmask constants
+    $middleware->trustProxies(at: '*', headers: SymfonyRequest::HEADER_X_FORWARDED_ALL);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
