@@ -7,6 +7,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use App\Models\Organization;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Auth;
 
@@ -41,7 +42,13 @@ class UserForm
                     ->label('Função')
                     ->options(function () {
                         $current = Auth::user();
-                        $all = Role::query()->pluck('name', 'id')->toArray();
+                        try {
+                            $guard = config('auth.defaults.guard', 'web');
+                            $all = Role::query()->where('guard_name', $guard)->pluck('name', 'id')->toArray();
+                        } catch (\Throwable $e) {
+                            Log::error('Falha ao carregar roles para UserForm: ' . $e->getMessage());
+                            $all = [];
+                        }
                         $isSuper = $current && method_exists($current, 'hasRole') && ($current->hasRole('super-admin') || $current->hasRole('super_admin'));
                         if ($isSuper) {
                             return $all;
@@ -57,18 +64,23 @@ class UserForm
                     // Não tentar salvar coluna inexistente 'role' na tabela users
                     ->dehydrated(false)
                     ->saveRelationshipsUsing(function ($component, $record, $state) {
-                        if ($state) {
-                            $role = Role::find($state);
-                            if ($role) {
-                                $actor = Auth::user();
-                                $actorIsSuper = $actor && method_exists($actor, 'hasRole') && ($actor->hasRole('super-admin') || $actor->hasRole('super_admin'));
-                                if (in_array($role->name, ['super-admin','super_admin'], true) && ! $actorIsSuper) {
-                                    return;
+                        try {
+                            if ($state) {
+                                $guard = config('auth.defaults.guard', 'web');
+                                $role = Role::query()->whereKey($state)->where('guard_name', $guard)->first();
+                                if ($role) {
+                                    $actor = Auth::user();
+                                    $actorIsSuper = $actor && method_exists($actor, 'hasRole') && ($actor->hasRole('super-admin') || $actor->hasRole('super_admin'));
+                                    if (in_array($role->name, ['super-admin','super_admin'], true) && ! $actorIsSuper) {
+                                        return;
+                                    }
+                                    $record->syncRoles([$role->name]);
                                 }
-                                $record->syncRoles([$role->name]);
+                            } else {
+                                $record->syncRoles([]);
                             }
-                        } else {
-                            $record->syncRoles([]);
+                        } catch (\Throwable $e) {
+                            Log::error('Falha ao sincronizar role no UserForm: ' . $e->getMessage());
                         }
                     }),
 
