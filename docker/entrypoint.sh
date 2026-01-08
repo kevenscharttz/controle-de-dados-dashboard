@@ -47,6 +47,17 @@ fi
 # Otimizacoes
 php artisan optimize || true
 
+# Log quick assets sanity check (useful on Render logs)
+echo "[entrypoint] Verificando assets compilados em public/build..."
+if [ -f "public/build/manifest.json" ]; then
+  head -n 50 public/build/manifest.json || true
+else
+  echo "[entrypoint] manifest.json NAO encontrado em public/build" || true
+fi
+
+ls -lah public/build/assets 2>/dev/null | head -n 50 || true
+ls -lah public/build/assets/theme-*.css 2>/dev/null || true
+
 # Iniciar servidor HTTP ouvindo na porta dinamica do Railway ($PORT)
 PORT_TO_USE=${PORT:-8080}
 echo "[entrypoint] Servidor ouvindo em 0.0.0.0:${PORT_TO_USE}"
