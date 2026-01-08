@@ -272,6 +272,46 @@ class ProxyController extends Controller
             $body = preg_replace_callback('#url\((\s*)(?!data:|https?://|//|/)([^)\s"\']+)(\s*)\)#i', function ($m) use ($absolutize, $rewriteToUniversal) {
                 return 'url(' . $rewriteToUniversal($absolutize($m[2])) . ')';
             }, $body);
+
+            // Inject JS shim to rewrite fetch/XMLHttpRequest to universal proxy (handles runtime API calls)
+            if (str_contains($contentType, 'text/html')) {
+                $js = '(function(){\n' .
+                    '  const BASE = ' . json_encode($proxyBase) . ';\n' .
+                    '  const ORIGIN = ' . json_encode($originWithPort) . ';\n' .
+                    '  function toAbs(u){ try { return new URL(u, ORIGIN).href; } catch(e){ return u; } }\n' .
+                    '  function toProxy(u){\n' .
+                    '    if (!u) return u;\n' .
+                    '    let abs = u;\n' .
+                    '    try { abs = new URL(u, ORIGIN).href; } catch(e) { return u; }\n' .
+                    '    const p = new URL(abs);\n' .
+                    '    if (p.protocol !== "http:" && p.protocol !== "https:") return u;\n' .
+                    '    const port = p.port ? ("/"+p.port) : "";\n' .
+                    '    return BASE + port + p.pathname + p.search + p.hash;\n' .
+                    '  }\n' .
+                    '  const _fetch = window.fetch;\n' .
+                    '  window.fetch = function(input, init){\n' .
+                    '    try {\n' .
+                    '      const url = (typeof input === "string") ? input : (input && input.url ? input.url : "");\n' .
+                    '      const proxied = toProxy(url);\n' .
+                    '      if (typeof input === "string") return _fetch(proxied, init);\n' .
+                    '      const req = new Request(proxied, input);\n' .
+                    '      return _fetch(req, init);\n' .
+                    '    } catch(e) { return _fetch(input, init); }\n' .
+                    '  };\n' .
+                    '  const _open = XMLHttpRequest.prototype.open;\n' .
+                    '  XMLHttpRequest.prototype.open = function(method, url){\n' .
+                    '    try { arguments[1] = toProxy(url); } catch(e) {}\n' .
+                    '    return _open.apply(this, arguments);\n' .
+                    '  };\n' .
+                    '})();';
+
+                $scriptTag = '<script>' . $js . '</script>';
+                $count = 0;
+                $body = preg_replace('~(<head[^>]*>)~i', '$1' . $scriptTag, $body, 1, $count);
+                if ($count === 0) {
+                    $body = preg_replace('~(<body[^>]*>)~i', '$1' . $scriptTag, $body, 1, $count);
+                }
+            }
         }
 
         return response($body, $status)->withHeaders([
