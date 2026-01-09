@@ -41,6 +41,9 @@ class User extends Authenticatable implements FilamentUser
                 'organization-manager',
                 // Papel genérico configurável do Shield para acesso ao painel
                 config('filament-shield.panel_user.name', 'panel_user'),
+                // Usuário padrão
+                'user',
+                'usuario',
             ];
 
             foreach ($allowedRoles as $role) {
