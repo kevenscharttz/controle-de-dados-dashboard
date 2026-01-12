@@ -20,6 +20,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Middleware\EnsureCanViewDashboard;
+use App\Http\Middleware\RedirectCommonUserToDashboards;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -77,6 +78,7 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
                 EnsureCanViewDashboard::class,
+                RedirectCommonUserToDashboards::class,
             ])
             ->plugins([
                 FilamentShieldPlugin::make(),
