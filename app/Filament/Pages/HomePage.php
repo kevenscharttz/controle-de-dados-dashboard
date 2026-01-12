@@ -12,6 +12,28 @@ class HomePage extends Page
     protected string $view = 'filament.pages.home';
     protected static ?int $navigationSort = 0;
 
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return;
+        }
+
+        // Consideramos "usuário comum" quem tem role user/usuario e não possui cargos elevados
+        $has = fn(string $r) => method_exists($user, 'hasRole') && $user->hasRole($r);
+        $isCommon = $has('user') || $has('usuario');
+        $isElevated = $has('super_admin') || $has('super-admin') || $has('organization-manager');
+
+        if ($isCommon && ! $isElevated) {
+            // Redireciona para a listagem de dashboards.
+            // A própria página de listagem já redireciona para a visualização
+            // quando a organização só permite um dashboard.
+            $url = \App\Filament\Resources\Dashboards\DashboardResource::getUrl('index');
+            $this->redirect($url);
+            return;
+        }
+    }
+
     public function getViewData(): array
     {
         $now = now();
