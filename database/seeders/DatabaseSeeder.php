@@ -13,11 +13,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Apenas os seeders essenciais para produção:
-        // - Roles & Permissions
+        // Seeders essenciais para produção:
         // - Super Admin (idempotente)
+        // Observação: desativamos o seeder de Roles & Permissions para evitar que suas alterações
+        // de permissões sejam sobrescritas em cada execução de db:seed.
+        // Caso queira reativar, chame PlatformRolesAndPermissionsSeeder manualmente.
         $this->call([
-            PlatformRolesAndPermissionsSeeder::class,
             DockerSuperAdminSeeder::class,
         ]);
     }
