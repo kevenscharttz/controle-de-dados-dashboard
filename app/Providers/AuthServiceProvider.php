@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Gate;
 use App\Models\Dashboard;
 use App\Models\Report;
 use App\Models\User;
+use App\Models\Organization;
 use App\Policies\DashboardPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\UserPolicy;
@@ -25,6 +26,7 @@ class AuthServiceProvider extends ServiceProvider
         Report::class => ReportPolicy::class,
         User::class => UserPolicy::class,
         Role::class => RolePolicy::class,
+        Organization::class => \App\Policies\OrganizationPolicy::class,
     ];
 
     /**

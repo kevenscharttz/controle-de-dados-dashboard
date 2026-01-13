@@ -14,8 +14,9 @@ class OrganizationPolicy
     
     public function viewAny(AuthUser $authUser): bool
     {
-        // Qualquer usuário autenticado pode listar, mas a listagem deve ser filtrada por escopo no resource
-        return $authUser !== null;
+        // Use permissões para controlar a visibilidade no menu/navigation
+        // Somente quem possui a permissão "ViewAny:Organization" verá o item no menu
+        return $authUser->can('ViewAny:Organization');
     }
 
     public function view(AuthUser $authUser, Organization $organization): bool
