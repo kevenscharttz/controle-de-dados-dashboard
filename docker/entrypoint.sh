@@ -40,10 +40,17 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
   php artisan migrate --force || echo "[entrypoint] Migrations falharam (provavel DB indisponivel). Continuando..."
 fi
 
-# Seeders essenciais (idempotentes) - controlado por RUN_SEEDERS (padrao: true)
+# Seeders essenciais (idempotentes)
+# - RUN_SEEDERS controla seeding em geral (padrao: true)
+# - RUN_ROLE_SEEDER controla o seeder de Roles/Permissions (padrao: false para NAO sobrescrever suas mudancas)
 if [ "${RUN_SEEDERS:-true}" = "true" ]; then
   echo "[entrypoint] Executando seeders essenciais..."
-  php artisan db:seed --class=PlatformRolesAndPermissionsSeeder --force || true
+  if [ "${RUN_ROLE_SEEDER:-false}" = "true" ]; then
+    echo "[entrypoint] PlatformRolesAndPermissionsSeeder habilitado via RUN_ROLE_SEEDER=true"
+    php artisan db:seed --class=PlatformRolesAndPermissionsSeeder --force || true
+  else
+    echo "[entrypoint] Pulando PlatformRolesAndPermissionsSeeder (RUN_ROLE_SEEDER=false)"
+  fi
   php artisan db:seed --class=DockerSuperAdminSeeder --force || true
 fi
 
