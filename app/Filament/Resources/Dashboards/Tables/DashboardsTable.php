@@ -83,6 +83,11 @@ class DashboardsTable
                         return null;
                     }),
 
+                TextColumn::make('folder.name')
+                    ->label('Pasta')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('url')
                     ->label('URL')
                     ->formatStateUsing(fn ($record) => !empty($record->url) ? '✓' : '✗')
@@ -101,6 +106,12 @@ class DashboardsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('folder_id')
+                    ->label('Pasta')
+                    ->options(function () {
+                        return \App\Models\DashboardFolder::orderBy('name')->pluck('name', 'id')->toArray();
+                    })
+                    ->searchable(),
                 SelectFilter::make('platform')
                     ->label('Plataforma')
                     ->options([

@@ -12,6 +12,7 @@ class Dashboard extends Model
     protected $fillable = [
         'title',
         'organization_id',
+        'folder_id',
         'type',
         'platform',
         'platform_custom',
@@ -69,6 +70,11 @@ class Dashboard extends Model
     public function organization()
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function folder()
+    {
+        return $this->belongsTo(DashboardFolder::class, 'folder_id');
     }
 
     /**

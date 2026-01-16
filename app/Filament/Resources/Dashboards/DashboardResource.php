@@ -57,7 +57,10 @@ class DashboardResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListDashboards::route('/'),
+            // Index: manage folders only
+            'index' => \App\Filament\Resources\Dashboards\Pages\ManageFolders::route('/'),
+            // Dashboards inside a specific folder
+            'folder' => ListDashboards::route('/folder/{folder}'),
             'create' => CreateDashboard::route('/create'),
             'view' => ViewDashboard::route('/{record}'),
             'edit' => EditDashboard::route('/{record}/edit'),

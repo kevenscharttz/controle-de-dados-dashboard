@@ -51,6 +51,8 @@ class AdminPanelProvider extends PanelProvider
             ->font('Inter')
             ->brandName('Observatório de Dados')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
+            // (intencional) sem clusters descobertos para evitar novo item de menu; 
+            // manteremos a navegação apenas via recurso "Dashboards" existente.
             ->pages([
                 \App\Filament\Pages\HomePage::class,
             ])

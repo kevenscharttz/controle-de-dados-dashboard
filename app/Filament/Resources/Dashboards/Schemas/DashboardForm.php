@@ -89,6 +89,25 @@ class DashboardForm
                         'required' => 'A organização é obrigatória.'
                     ]),
 
+                Select::make('folder_id')
+                    ->label('Pasta')
+                    ->helperText('Opcional: escolha uma pasta dentro da organização para organizar seus dashboards')
+                    ->searchable()
+                    ->preload()
+                    ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                        $orgId = $get('organization_id');
+                        if (! $orgId) {
+                            return [];
+                        }
+                        return \App\Models\DashboardFolder::where('organization_id', $orgId)
+                            ->orderBy('name')
+                            ->pluck('name', 'id');
+                    })
+                    ->default(function () {
+                        return request()->query('folder_id');
+                    })
+                    ->native(false),
+
                 Textarea::make('description')
                     ->label('Descrição')
                     ->helperText('Descreva o propósito e conteúdo do dashboard')
