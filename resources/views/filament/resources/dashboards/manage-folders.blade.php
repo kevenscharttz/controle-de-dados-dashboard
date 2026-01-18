@@ -2,6 +2,7 @@
     @php /** @var \Illuminate\Database\Eloquent\Collection<\App\Models\DashboardFolder> $folders */ @endphp
 
     <div class="p-6">
+        @php $user = auth()->user(); @endphp
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold">Pastas</h3>
             <div class="text-xs text-gray-500">Gerencie suas pastas. Abra uma para ver e criar dashboards.</div>
@@ -22,10 +23,12 @@
                                     <a href="{{ \App\Filament\Resources\Dashboards\DashboardResource::getUrl('folder', ['folder' => $folder->id]) }}" class="text-sm font-semibold text-gray-800">
                                         {{ $folder->name }}
                                     </a>
-                                    <div class="flex items-center gap-2">
-                                        <button x-on:click="const name = prompt('Novo nome da pasta', '{{ $folder->name }}'); if (name) { $wire.renameFolder({{ $folder->id }}, name) }" class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200">Renomear</button>
-                                        <button x-on:click="if (confirm('Excluir esta pasta? Os dashboards permanecerão associados, mas sem pasta.')) { $wire.deleteFolder({{ $folder->id }}) }" class="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Excluir</button>
-                                    </div>
+                                    @if ($user && method_exists($user, 'hasRole') && ($user->hasRole('super_admin') || $user->hasRole('super-admin') || $user->hasRole('organization-manager')))
+                                        <div class="flex items-center gap-2">
+                                            <button x-on:click="const name = prompt('Novo nome da pasta', '{{ $folder->name }}'); if (name) { $wire.renameFolder({{ $folder->id }}, name) }" class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200">Renomear</button>
+                                            <button x-on:click="if (confirm('Excluir esta pasta? Os dashboards permanecerão associados, mas sem pasta.')) { $wire.deleteFolder({{ $folder->id }}) }" class="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Excluir</button>
+                                        </div>
+                                    @endif
                                 </div>
                                 <div class="text-xs text-gray-500 mt-1">{{ $folder->dashboards()->count() }} dashboards</div>
                             </div>

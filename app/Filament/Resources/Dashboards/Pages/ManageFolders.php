@@ -24,6 +24,12 @@ class ManageFolders extends Page
                 ->label('Criar Pasta')
                 ->icon('heroicon-o-folder-plus')
                 ->color('primary')
+                ->visible(function () {
+                    $user = Auth::user();
+                    $isAdmin = $user && method_exists($user, 'hasRole') && ($user->hasRole('super_admin') || $user->hasRole('super-admin'));
+                    $isManager = $user && method_exists($user, 'hasRole') && $user->hasRole('organization-manager');
+                    return $isAdmin || $isManager;
+                })
                 ->form([
                     \Filament\Forms\Components\TextInput::make('name')
                         ->label('Nome da Pasta')

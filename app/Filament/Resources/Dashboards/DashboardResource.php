@@ -59,8 +59,8 @@ class DashboardResource extends Resource
         return [
             // Index: manage folders only
             'index' => \App\Filament\Resources\Dashboards\Pages\ManageFolders::route('/'),
-            // Dashboards inside a specific folder
-            'folder' => ListDashboards::route('/folder/{folder}'),
+            // Dashboards inside a specific folder (render all in a grid)
+            'folder' => \App\Filament\Resources\Dashboards\Pages\FolderDashboards::route('/folder/{folder}'),
             'create' => CreateDashboard::route('/create'),
             'view' => ViewDashboard::route('/{record}'),
             'edit' => EditDashboard::route('/{record}/edit'),
