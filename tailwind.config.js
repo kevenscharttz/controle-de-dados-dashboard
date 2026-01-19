@@ -28,6 +28,22 @@ export default {
                     ...defaultTheme.fontFamily.sans,
                 ],
             },
+            // Ensure Tailwind knows our "primary" palette so classes like bg-primary-600 work in production
+            colors: {
+                primary: {
+                    50: '#eef7ff',
+                    100: '#d9edff',
+                    200: '#bce0ff',
+                    300: '#8eccff',
+                    400: '#59b0ff',
+                    500: '#3b8def',
+                    600: '#2570e3',
+                    700: '#1e5bc7',
+                    800: '#1e4ba3',
+                    900: '#1e4081',
+                    950: '#162951',
+                },
+            },
         },
     },
     plugins: [
