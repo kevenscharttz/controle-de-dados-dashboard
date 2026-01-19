@@ -1,14 +1,14 @@
 <x-filament-panels::page>
     @php /** @var \Illuminate\Database\Eloquent\Collection<\App\Models\Dashboard> $dashboards */ @endphp
 
-    <div class="max-w-full mx-auto px-0 sm:px-2">
+    <div class="w-full px-0 sm:px-2">
 
     @if($dashboards->isEmpty())
         <div class="rounded-lg border border-gray-200 p-6 text-gray-600">
             Nenhum dashboard nesta pasta.
         </div>
     @else
-    <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(560px,1fr))]">
+    <div class="grid grid-cols-1 gap-6">
             @foreach($dashboards as $record)
                 @php
                     $rawUrl = $record->url ?? '';
@@ -42,7 +42,8 @@
                             </a>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ $record->organization->name ?? '-' }}</p>
                         </div>
-                        <a href="{{ $viewUrl }}" class="inline-flex items-center rounded-md bg-primary-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <a href="{{ $viewUrl }}" class="fi-btn fi-btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold">
+                            <x-filament::icon icon="heroicon-m-eye" class="w-4 h-4" />
                             Focar
                         </a>
                     </div>
