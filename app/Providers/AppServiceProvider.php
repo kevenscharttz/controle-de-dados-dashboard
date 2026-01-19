@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Foundation\Vite;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,6 +40,19 @@ class AppServiceProvider extends ServiceProvider
                 URL::forceScheme('https');
             } catch (\Throwable $e) {
                 \Log::warning('Falha ao forcar esquema https: '.$e->getMessage());
+            }
+
+            // Em algumas plataformas (Render), ASSET_URL pode estar incorreto (ex: incluir /painel),
+            // o que quebra os links gerados pelo Vite para /build/assets/*.css|js e a página fica sem estilo.
+            // Este override força o uso de caminhos absolutos desde a raiz, ignorando ASSET_URL.
+            try {
+                app(Vite::class)
+                    ->useBuildDirectory('build')
+                    ->createAssetPathsUsing(function (string $path, ?bool $secure = null): string {
+                        return '/'.ltrim($path, '/');
+                    });
+            } catch (\Throwable $e) {
+                \Log::warning('Falha ao ajustar Vite asset paths: '.$e->getMessage());
             }
 
             try {
