@@ -1,14 +1,14 @@
 <x-filament-panels::page>
     @php /** @var \Illuminate\Database\Eloquent\Collection<\App\Models\Dashboard> $dashboards */ @endphp
 
-    <div class="max-w-full mx-auto px-3">
+    <div class="max-w-full mx-auto px-0 sm:px-2">
 
     @if($dashboards->isEmpty())
         <div class="rounded-lg border border-gray-200 p-6 text-gray-600">
             Nenhum dashboard nesta pasta.
         </div>
     @else
-    <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(680px,1fr))]">
+    <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(560px,1fr))]">
             @foreach($dashboards as $record)
                 @php
                     $rawUrl = $record->url ?? '';
