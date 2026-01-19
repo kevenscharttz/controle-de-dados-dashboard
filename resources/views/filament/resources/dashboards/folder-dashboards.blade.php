@@ -1,14 +1,14 @@
 <x-filament-panels::page>
     @php /** @var \Illuminate\Database\Eloquent\Collection<\App\Models\Dashboard> $dashboards */ @endphp
 
-    <div class="w-full px-0 sm:px-2">
+    <div class="max-w-full mx-auto px-0 sm:px-2">
 
     @if($dashboards->isEmpty())
         <div class="rounded-lg border border-gray-200 p-6 text-gray-600">
             Nenhum dashboard nesta pasta.
         </div>
     @else
-    <div class="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(520px,1fr))]">
+    <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(560px,1fr))]">
             @foreach($dashboards as $record)
                 @php
                     $rawUrl = $record->url ?? '';
@@ -52,10 +52,13 @@
                             <div class="animate-pulse w-24 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded"></div>
                         </div>
                         <iframe
-                            src="{{ $iframeUrl }}"
+                            src="about:blank"
+                            data-src="{{ $iframeUrl }}"
                             class="w-full h-[55vh] sm:h-[60vh] border-0 block"
                             loading="lazy"
                             x-on:load="loaded = true"
+                            referrerpolicy="no-referrer"
+                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                             allow="fullscreen"
                         ></iframe>
                     </div>
@@ -76,4 +79,47 @@
             @endforeach
         </div>
     @endif
+    <script>
+    (() => {
+        const MAX_CONCURRENCY = 2; // quantos iframes carregam ao mesmo tempo
+        const rootMargin = '600px'; // começa a enfileirar antes de entrar no viewport
+
+        const queue = [];
+        let active = 0;
+
+        const startLoad = (el) => {
+            if (!el || el.dataset._started) return;
+            el.dataset._started = '1';
+            const src = el.getAttribute('data-src');
+            if (!src) return;
+            el.addEventListener('load', () => {
+                active = Math.max(0, active - 1);
+                dequeue();
+            }, { once: true });
+            el.src = src;
+            el.removeAttribute('data-src');
+        };
+
+        const dequeue = () => {
+            while (active < MAX_CONCURRENCY && queue.length) {
+                const el = queue.shift();
+                active++;
+                startLoad(el);
+            }
+        };
+
+        const io = new IntersectionObserver((entries) => {
+            for (const e of entries) {
+                const el = e.target;
+                if (e.isIntersecting) {
+                    io.unobserve(el);
+                    queue.push(el);
+                    dequeue();
+                }
+            }
+        }, { root: null, rootMargin, threshold: 0 });
+
+        document.querySelectorAll('iframe[data-src]').forEach((el) => io.observe(el));
+    })();
+    </script>
 </x-filament-panels::page>
