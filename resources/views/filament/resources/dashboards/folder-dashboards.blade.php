@@ -8,7 +8,7 @@
             Nenhum dashboard nesta pasta.
         </div>
     @else
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+    <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(520px,1fr))]">
             @foreach($dashboards as $record)
                 @php
                     $rawUrl = $record->url ?? '';
@@ -53,7 +53,7 @@
                         </div>
                         <iframe
                             src="{{ $iframeUrl }}"
-                            class="w-full h-[45vh] sm:h-[50vh] border-0 block"
+                            class="w-full h-[55vh] sm:h-[60vh] border-0 block"
                             loading="lazy"
                             x-on:load="loaded = true"
                             allow="fullscreen"
