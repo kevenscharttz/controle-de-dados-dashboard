@@ -7,6 +7,9 @@ echo "[entrypoint] Iniciando container Laravel..."
 # Log de URLs base (ajuda a diagnosticar mixed-content)
 echo "[entrypoint] APP_URL=${APP_URL:-unset} ASSET_URL=${ASSET_URL:-unset}"
 
+# Se existir arquivo de hot reload do Vite (public/hot), remova para evitar que o app tente carregar assets via dev server.
+rm -f public/hot 2>/dev/null || true
+
 # Garantir diretorios de cache/sessoes/views existentes e permissoes corretas
 mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache || true
 chown -R www-data:www-data storage bootstrap/cache || true

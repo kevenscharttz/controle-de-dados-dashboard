@@ -45,6 +45,9 @@ class AppServiceProvider extends ServiceProvider
         try {
             app(Vite::class)
                 ->useBuildDirectory('build')
+                // Evitar que o Laravel detecte modo hot via public/hot em producao:
+                // aponta o hot file para um local controlado que nao existe.
+                ->useHotFile(storage_path('framework/vite.hot'))
                 ->createAssetPathsUsing(function (string $path, ?bool $secure = null): string {
                     return '/'.ltrim($path, '/');
                 });

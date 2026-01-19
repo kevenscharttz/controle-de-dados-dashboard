@@ -1,0 +1,3 @@
+# Ignore Vite hot file (dev server pointer)
+/public/hot
+/public/hot*
