@@ -32,29 +32,29 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        // Forçar HTTPS quando suportado (evita mixed content em hosts com proxy HTTPS)
+        try {
+            URL::forceScheme('https');
+        } catch (\Throwable $e) {
+            \Log::warning('Falha ao forcar esquema https: '.$e->getMessage());
+        }
+
+        // Override robusto dos caminhos de assets do Vite:
+        // Gera URLs absolutas "/build/..." e ignora ASSET_URL incorreto que possa adicionar subcaminhos.
+        // Seguro também em modo hot, pois o Vite ignora assetPath quando isRunningHot().
+        try {
+            app(Vite::class)
+                ->useBuildDirectory('build')
+                ->createAssetPathsUsing(function (string $path, ?bool $secure = null): string {
+                    return '/'.ltrim($path, '/');
+                });
+        } catch (\Throwable $e) {
+            \Log::warning('Falha ao ajustar Vite asset paths: '.$e->getMessage());
+        }
+
         // Fallback: garantir que o usuário admin tenha role super_admin em produção
         // Útil em plataformas sem shell (Render free), idempotente e leve.
         if ($this->app->environment('production')) {
-            // Forçar HTTPS em produção para evitar mixed content (Render usa HTTPS)
-            try {
-                URL::forceScheme('https');
-            } catch (\Throwable $e) {
-                \Log::warning('Falha ao forcar esquema https: '.$e->getMessage());
-            }
-
-            // Em algumas plataformas (Render), ASSET_URL pode estar incorreto (ex: incluir /painel),
-            // o que quebra os links gerados pelo Vite para /build/assets/*.css|js e a página fica sem estilo.
-            // Este override força o uso de caminhos absolutos desde a raiz, ignorando ASSET_URL.
-            try {
-                app(Vite::class)
-                    ->useBuildDirectory('build')
-                    ->createAssetPathsUsing(function (string $path, ?bool $secure = null): string {
-                        return '/'.ltrim($path, '/');
-                    });
-            } catch (\Throwable $e) {
-                \Log::warning('Falha ao ajustar Vite asset paths: '.$e->getMessage());
-            }
-
             try {
                 $email = env('DOCKER_ADMIN_EMAIL') ?? env('ADMIN_EMAIL', 'admin@example.com');
                 /** @var \App\Models\User|null $admin */
